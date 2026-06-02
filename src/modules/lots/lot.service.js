@@ -3,6 +3,8 @@ import { createLot, findAllLots, findLotById, findLotByQrCode, updateLotStatus }
 import { AppError } from '../../shared/AppError.js'
 import { logAction } from '../../shared/audit.helper.js'
 import { findLotsByFilters } from './lot.repository.js'
+import { findLotAncestors, findLotDescendants } from './lot.repository.js'
+
 
 const generateCode = () => `LOT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
 
@@ -50,3 +52,20 @@ export const changeLotStatus = async (id, status) => {
 }
 
 export const getLotsByFilters = (filters) => findLotsByFilters(filters)
+
+
+export const getLotTree = async (id) => {
+  const lot = await findLotById(id)
+  if (!lot) throw new AppError('Lote no encontrado', 404)
+
+  const [ancestors, descendants] = await Promise.all([
+    findLotAncestors(id),
+    findLotDescendants(id)
+  ])
+
+  return {
+    current: lot,
+    ancestors,
+    descendants
+  }
+}

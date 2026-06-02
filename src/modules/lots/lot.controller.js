@@ -7,6 +7,8 @@ import {
   getLotsByFilters
 } from './lot.service.js'
 import { successResponse } from '../../shared/response.helper.js'
+import { getLotTree } from './lot.service.js'
+
 
 export const createLotController = async (req, res, next) => {
   try {
@@ -58,6 +60,15 @@ export const getLotsByFiltersController = async (req, res, next) => {
     const { status, search, fromDate, toDate } = req.query
     const lots = await getLotsByFilters({ status, search, fromDate, toDate })
     successResponse(res, lots)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getLotTreeController = async (req, res, next) => {
+  try {
+    const tree = await getLotTree(req.params.id)
+    successResponse(res, tree)
   } catch (error) {
     next(error)
   }

@@ -5,7 +5,8 @@ import {
   getLotByIdController,
   getPublicLotController,
   changeLotStatusController,
-  getLotsByFiltersController
+  getLotsByFiltersController,
+  getLotTreeController
 } from './lot.controller.js'
 import { authenticate, authorize } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
@@ -19,9 +20,11 @@ router.get('/public/:qrCode', getPublicLotController)
 router.get('/search', authenticate, getLotsByFiltersController)
 
 // protegidas
+router.get('/:id/tree', authenticate, getLotTreeController)
 router.get('/', authenticate, getAllLotsController)
 router.get('/:id', authenticate, getLotByIdController)
 router.post('/', authenticate, authorize('ADMIN', 'OPERATOR'), validate(createLotDto), createLotController)
 router.patch('/:id/status', authenticate, authorize('ADMIN', 'OPERATOR'), validate(updateLotStatusDto), changeLotStatusController)
+
 
 export default router
