@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "prisma:migrate": "pnpm dlx prisma@6 migrate dev",
     "prisma:studio": "pnpm dlx prisma@6 studio",
-    "prisma:generate": "pnpm dlx prisma@6 generate"
+    "prisma:generate": "pnpm dlx prisma@6 generate",
+    "prisma:seed": "node prisma/seed.js"
   },
   "keywords": [],
   "author": "",
