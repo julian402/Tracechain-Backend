@@ -19,7 +19,7 @@ const PLANS = [
     price: 0,
     sortOrder: 0,
     limits: { lots: 10, users: 3 },
-    features: { reports: false, advancedMovements: false, inspections: false },
+    features: { reports: false, advancedMovements: false, inspections: false, analytics: false },
   },
   {
     key: 'PRO',
@@ -28,7 +28,7 @@ const PLANS = [
     price: 49,
     sortOrder: 1,
     limits: { lots: 1000, users: 50 },
-    features: { reports: true, advancedMovements: true, inspections: true },
+    features: { reports: true, advancedMovements: true, inspections: true, analytics: true },
   },
 ]
 
@@ -61,9 +61,7 @@ async function main() {
   const permissions = await prisma.permission.findMany()
   const permByKey = Object.fromEntries(permissions.map((p) => [p.key, p.id]))
 
-  // 3. Rol global SUPER_ADMIN (sin organización) + super admin
-  // findFirst + create: la unique compuesta (organizationId, name) no es fiable
-  // con organizationId NULL en Postgres, así que no se usa upsert aquí.
+  // 3. Rol global SUPER_ADMIN (sin organización) — rol de sistema (no usado para permisos, sí para display)
   let superRole = await prisma.role.findFirst({
     where: { organizationId: null, name: SUPER_ADMIN_ROLE_NAME },
   })
@@ -81,16 +79,34 @@ async function main() {
     })
   }
 
+  // 3b. Organización de la plataforma "TraceChain" (plan PRO, para el super admin)
+  const proPlan = await prisma.plan.findUnique({ where: { key: 'PRO' } })
+  let platformOrg = await prisma.organization.findUnique({ where: { slug: 'tracechain' } })
+  if (!platformOrg) {
+    platformOrg = await prisma.$transaction(async (tx) => {
+      const org = await tx.organization.create({
+        data: { name: 'TraceChain', slug: 'tracechain', planId: proPlan.id },
+      })
+      await seedOrganizationRoles(tx, org.id)
+      return org
+    })
+  }
+
+  const platformAdminRole = await prisma.role.findUnique({
+    where: { organizationId_name: { organizationId: platformOrg.id, name: OWNER_ROLE_NAME } },
+  })
+
   const superPassword = await bcrypt.hash('admin123', 10)
   await prisma.user.upsert({
     where: { email: 'admin@tracechain.com' },
-    update: { isSuperAdmin: true, roleId: superRole.id, organizationId: null },
+    update: { isSuperAdmin: true, roleId: platformAdminRole.id, organizationId: platformOrg.id },
     create: {
       name: 'Super Admin',
       email: 'admin@tracechain.com',
       password: superPassword,
       isSuperAdmin: true,
-      roleId: superRole.id,
+      roleId: platformAdminRole.id,
+      organizationId: platformOrg.id,
     },
   })
 

@@ -3,6 +3,7 @@ import {
   getOrganizations,
   getOrganizationDetail,
   getMyOrganization,
+  updateMyOrganization,
   changeOrganizationPlan,
   changeOrganizationStatus,
 } from './organizations.service.js'
@@ -29,6 +30,15 @@ export const getOrganizationsController = async (req, res, next) => {
 export const getMyOrganizationController = async (req, res, next) => {
   try {
     const org = await getMyOrganization(req.user.organizationId)
+    successResponse(res, org)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateMyOrganizationController = async (req, res, next) => {
+  try {
+    const org = await updateMyOrganization(req.user.organizationId, req.body)
     successResponse(res, org)
   } catch (error) {
     next(error)

@@ -4,6 +4,7 @@ import {
   getUserById,
   createUserService,
   updateUserService,
+  promoteToSuperAdminService,
   changePassword,
   deleteUserService
 } from './users.service.js'
@@ -14,10 +15,11 @@ const canManageUsers = (req) =>
 
 export const getAllUsersController = async (req, res, next) => {
   try {
-    if (req.user.isSuperAdmin) {
-      const users = await getAllUsersGlobal()
-      return successResponse(res, users)
+    // scope=all: vista global para la página de plataforma (/admin/users — solo super admin)
+    if (req.user.isSuperAdmin && req.query.scope === 'all') {
+      return successResponse(res, await getAllUsersGlobal())
     }
+    // Vista org-level: scoped a la org del usuario (incluye super admin → su org propia)
     const users = await getAllUsers(req.organizationId)
     successResponse(res, users)
   } catch (error) {
@@ -55,6 +57,15 @@ export const updateUserController = async (req, res, next) => {
       requestorId: req.user.id,
       isSuperAdmin: req.user.isSuperAdmin,
     })
+    successResponse(res, user)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const promoteToSuperAdminController = async (req, res, next) => {
+  try {
+    const user = await promoteToSuperAdminService(req.params.id, req.user.isSuperAdmin)
     successResponse(res, user)
   } catch (error) {
     next(error)

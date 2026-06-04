@@ -1,4 +1,4 @@
-import { exportLotsCSV, exportMovementsCSV, exportLotsPDF } from './report.service.js'
+import { exportLotsCSV, exportMovementsCSV, exportLotsPDF, exportAuditCSV } from './report.service.js'
 
 export const exportLotsCSVController = async (req, res, next) => {
   try {
@@ -28,6 +28,17 @@ export const exportLotsPDFController = async (req, res, next) => {
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename=reporte-lotes.pdf')
     res.send(pdf)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const exportAuditCSVController = async (req, res, next) => {
+  try {
+    const csv = await exportAuditCSV(req.organizationId)
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', 'attachment; filename=auditoria.csv')
+    res.send(csv)
   } catch (error) {
     next(error)
   }

@@ -5,6 +5,7 @@ const userSelect = {
   name: true,
   email: true,
   organizationId: true,
+  isSuperAdmin: true,
   createdAt: true,
   updatedAt: true,
   role: { select: { id: true, name: true } }

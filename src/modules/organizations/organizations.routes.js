@@ -3,13 +3,14 @@ import {
   createOrganizationController,
   getOrganizationsController,
   getMyOrganizationController,
+  updateMyOrganizationController,
   getOrganizationController,
   changeOrganizationPlanController,
   changeOrganizationStatusController,
 } from './organizations.controller.js'
-import { authenticate, requireSuperAdmin } from '../../middlewares/auth.js'
+import { authenticate, requireSuperAdmin, requirePermission } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
-import { createOrgDto, changePlanDto, changeStatusDto } from './organizations.dto.js'
+import { createOrgDto, changePlanDto, changeStatusDto, updateOrgDto } from './organizations.dto.js'
 
 const router = Router()
 
@@ -25,6 +26,7 @@ const router = Router()
  */
 // Cualquier usuario autenticado puede leer su propia organización (billing / uso).
 router.get('/me', authenticate, getMyOrganizationController)
+router.patch('/me', authenticate, requirePermission('users:manage'), validate(updateOrgDto), updateMyOrganizationController)
 
 /**
  * @swagger

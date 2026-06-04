@@ -10,7 +10,7 @@ import { successResponse } from '../../shared/response.helper.js'
 
 export const getRolesController = async (req, res, next) => {
   try {
-    // Super admin puede pedir roles de cualquier org vía ?organizationId=
+    // Super admin puede pedir roles de cualquier org vía ?organizationId=; por defecto la suya propia.
     const orgId = req.user.isSuperAdmin && req.query.organizationId
       ? req.query.organizationId
       : req.organizationId

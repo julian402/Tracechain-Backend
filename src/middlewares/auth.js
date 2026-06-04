@@ -58,6 +58,7 @@ export const requireSuperAdmin = (req, res, next) => {
  */
 export const tenantScope = (req, res, next) => {
   if (req.user?.isSuperAdmin) {
+    // Super admin puede inspeccionar otra org vía ?organizationId=; por defecto usa la suya propia.
     req.organizationId = req.query.organizationId || req.user.organizationId || null
   } else {
     req.organizationId = req.user.organizationId

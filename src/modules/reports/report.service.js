@@ -4,7 +4,7 @@ import prisma from '../../config/db.js'
 
 const getLotData = (organizationId) => {
   return prisma.lot.findMany({
-    where: { organizationId },
+    where: organizationId ? { organizationId } : {},
     include: {
       createdBy: { select: { name: true, email: true } },
       movements: true
@@ -15,7 +15,7 @@ const getLotData = (organizationId) => {
 
 const getMovementData = (organizationId) => {
   return prisma.movement.findMany({
-    where: { organizationId },
+    where: organizationId ? { organizationId } : {},
     include: {
       lot: { select: { code: true, name: true } },
       createdBy: { select: { name: true } }
@@ -112,4 +112,28 @@ export const exportLotsPDF = async (organizationId) => {
 
     doc.end()
   })
+}
+
+export const exportAuditCSV = async (organizationId) => {
+  const logs = await prisma.auditLog.findMany({
+    where: organizationId ? { organizationId } : {},
+    include: {
+      user: { select: { name: true } },
+      lot: { select: { code: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 5000,
+  })
+
+  const data = logs.map((l) => ({
+    accion: l.action,
+    entidad: l.entity,
+    entidadId: l.entityId,
+    usuario: l.user?.name ?? '',
+    lote: l.lot ? `${l.lot.code} — ${l.lot.name}` : '',
+    fecha: l.createdAt.toISOString().split('T')[0],
+  }))
+
+  const parser = new Parser()
+  return parser.parse(data)
 }

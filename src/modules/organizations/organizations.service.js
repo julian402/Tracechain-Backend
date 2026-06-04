@@ -113,6 +113,24 @@ export const changeOrganizationPlan = async (id, planId) => {
   return getOrganizationDetail(updated.id)
 }
 
+export const updateMyOrganization = async (organizationId, { name, slug }) => {
+  if (!organizationId) throw new AppError('No perteneces a ninguna organización', 404)
+  const org = await findOrganizationById(organizationId)
+  if (!org) throw new AppError('Organización no encontrada', 404)
+
+  if (slug && slug !== org.slug) {
+    const existing = await prisma.organization.findUnique({ where: { slug } })
+    if (existing) throw new AppError('El slug ya está en uso', 400)
+  }
+
+  const data = {}
+  if (name !== undefined) data.name = name
+  if (slug !== undefined) data.slug = slug
+
+  await updateOrganization(organizationId, data)
+  return getOrganizationDetail(organizationId)
+}
+
 export const changeOrganizationStatus = async (id, status) => {
   if (!ORG_STATUSES.includes(status)) {
     throw new AppError('Estado inválido', 400)

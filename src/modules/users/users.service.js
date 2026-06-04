@@ -85,6 +85,15 @@ export const updateUserService = async (id, data, { organizationId, canManage, r
   }
 }
 
+export const promoteToSuperAdminService = async (id, requestorIsSuperAdmin) => {
+  if (!requestorIsSuperAdmin) throw new AppError('No autorizado', 403)
+  const user = await findUserById(id)
+  if (!user) throw new AppError('Usuario no encontrado', 404)
+  if (user.isSuperAdmin) throw new AppError('El usuario ya es super admin', 400)
+  // Solo activa el flag — conserva la org y el rol para no dejar organizationId en null
+  return updateUser(id, { isSuperAdmin: true })
+}
+
 export const changePassword = async (id, { currentPassword, newPassword }) => {
   const user = await findUserById(id)
   if (!user) throw new AppError('Usuario no encontrado', 404)

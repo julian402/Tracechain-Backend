@@ -16,7 +16,8 @@ export const PLAN_LIMITS = [
 ]
 
 export const PLAN_FEATURES = [
-  { key: 'reports', label: 'Reportes', description: 'Exportar reportes en CSV y PDF.' },
+  { key: 'reports', label: 'Reportes y exportaciones (CSV/PDF)', description: 'Exportar reportes en CSV y PDF.' },
+  { key: 'analytics', label: 'Analítica avanzada (Superset)', description: 'Dashboards embebidos vía Apache Superset.' },
   { key: 'advancedMovements', label: 'Movimientos avanzados', description: 'Transformaciones, divisiones y fusiones de lotes.' },
   { key: 'inspections', label: 'Inspecciones y auditorías', description: 'Registrar visitas, hallazgos y auditorías.' },
 ]

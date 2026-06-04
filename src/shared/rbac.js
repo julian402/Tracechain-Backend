@@ -29,8 +29,9 @@ export const PERMISSIONS = [
   { key: 'inspections:read', module: 'inspections', action: 'read', label: 'Ver inspecciones' },
   { key: 'inspections:create', module: 'inspections', action: 'create', label: 'Crear inspecciones' },
 
-  // Reportes
-  { key: 'reports:read', module: 'reports', action: 'read', label: 'Generar reportes' },
+  // Reportes y analítica
+  { key: 'reports:read', module: 'reports', action: 'read', label: 'Exportar reportes (CSV/PDF)' },
+  { key: 'analytics:read', module: 'analytics', action: 'read', label: 'Ver analítica (Superset)' },
 
   // Usuarios (de la organización)
   { key: 'users:read', module: 'users', action: 'read', label: 'Ver usuarios' },
@@ -75,7 +76,7 @@ export const ROLE_TEMPLATES = {
       'movements:read', 'movements:create',
       'audit:read',
       'inspections:read', 'inspections:create',
-      'reports:read',
+      'reports:read', 'analytics:read',
     ],
   },
   OPERARIO: {
@@ -96,7 +97,7 @@ export const ROLE_TEMPLATES = {
       'movements:read',
       'audit:read',
       'inspections:read', 'inspections:create',
-      'reports:read',
+      'reports:read', 'analytics:read',
     ],
   },
 }

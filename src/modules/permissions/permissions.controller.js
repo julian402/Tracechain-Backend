@@ -15,7 +15,7 @@ export const getPermissionsController = async (_req, res, next) => {
     }
     const grouped = Object.entries(byModule).map(([module, items]) => ({ module, permissions: items }))
 
-    successResponse(res, { permissions, grouped })
+    successResponse(res, grouped)
   } catch (error) {
     next(error)
   }
