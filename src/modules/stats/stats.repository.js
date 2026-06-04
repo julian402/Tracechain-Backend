@@ -5,6 +5,11 @@ export const getDashboardStats = async () => {
   const in7Days = new Date()
   in7Days.setDate(now.getDate() + 7)
 
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
+  sixMonthsAgo.setDate(1)
+  sixMonthsAgo.setHours(0, 0, 0, 0)
+
   const [
     totalLots,
     activeLots,
@@ -13,6 +18,7 @@ export const getDashboardStats = async () => {
     expiringLots,
     totalMovements,
     recentLots,
+    lotsForChart,
     activeAlerts
   ] = await Promise.all([
     prisma.lot.count(),
@@ -32,6 +38,10 @@ export const getDashboardStats = async () => {
       include: {
         createdBy: { select: { id: true, name: true } }
       }
+    }),
+    prisma.lot.findMany({
+      where: { createdAt: { gte: sixMonthsAgo } },
+      select: { createdAt: true }
     }),
     prisma.lot.findMany({
       where: {
@@ -57,6 +67,19 @@ export const getDashboardStats = async () => {
     })
   ])
 
+  const monthMap = {}
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date()
+    d.setMonth(d.getMonth() - i)
+    const key = d.toISOString().slice(0, 7)
+    monthMap[key] = 0
+  }
+  lotsForChart.forEach(l => {
+    const key = l.createdAt.toISOString().slice(0, 7)
+    if (key in monthMap) monthMap[key]++
+  })
+  const lotsByMonth = Object.entries(monthMap).map(([mes, lotes]) => ({ mes, lotes }))
+
   return {
     kpis: {
       totalLots,
@@ -67,6 +90,7 @@ export const getDashboardStats = async () => {
       totalMovements
     },
     recentLots,
-    activeAlerts
+    activeAlerts,
+    lotsByMonth
   }
 }

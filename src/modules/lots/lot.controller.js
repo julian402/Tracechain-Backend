@@ -1,10 +1,12 @@
 import {
   createLotService,
   getAllLots,
+  getPaginatedLots,
   getLotById,
   getPublicLotByQr,
   changeLotStatus,
-  getLotsByFilters
+  getLotsByFilters,
+  updateLotService
 } from './lot.service.js'
 import { successResponse } from '../../shared/response.helper.js'
 import { getLotTree } from './lot.service.js'
@@ -21,8 +23,9 @@ export const createLotController = async (req, res, next) => {
 
 export const getAllLotsController = async (req, res, next) => {
   try {
-    const lots = await getAllLots()
-    successResponse(res, lots)
+    const { page = 1, limit = 10, search, status } = req.query
+    const result = await getPaginatedLots({ page, limit, search, status })
+    successResponse(res, result)
   } catch (error) {
     next(error)
   }
@@ -60,6 +63,15 @@ export const getLotsByFiltersController = async (req, res, next) => {
     const { status, search, fromDate, toDate } = req.query
     const lots = await getLotsByFilters({ status, search, fromDate, toDate })
     successResponse(res, lots)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateLotController = async (req, res, next) => {
+  try {
+    const lot = await updateLotService(req.params.id, req.body, req.user.id)
+    successResponse(res, lot)
   } catch (error) {
     next(error)
   }

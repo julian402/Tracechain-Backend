@@ -14,7 +14,7 @@ const router = Router()
 
 router.get('/', authenticate, authorize('ADMIN'), getAllUsersController)
 router.get('/:id', authenticate, getUserByIdController)
-router.patch('/:id', authenticate, authorize('ADMIN'), validate(updateUserDto), updateUserController)
+router.patch('/:id', authenticate, validate(updateUserDto), updateUserController)
 router.patch('/:id/password', authenticate, validate(changePasswordDto), changePasswordController)
 router.delete('/:id', authenticate, authorize('ADMIN'), deleteUserController)
 

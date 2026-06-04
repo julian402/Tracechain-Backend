@@ -6,11 +6,12 @@ import {
   getPublicLotController,
   changeLotStatusController,
   getLotsByFiltersController,
-  getLotTreeController
+  getLotTreeController,
+  updateLotController
 } from './lot.controller.js'
 import { authenticate, authorize } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
-import { createLotDto, updateLotStatusDto } from './lot.dto.js'
+import { createLotDto, updateLotStatusDto, updateLotDto } from './lot.dto.js'
 
 const router = Router()
 
@@ -25,6 +26,7 @@ router.get('/', authenticate, getAllLotsController)
 router.get('/:id', authenticate, getLotByIdController)
 router.post('/', authenticate, authorize('ADMIN', 'OPERATOR'), validate(createLotDto), createLotController)
 router.patch('/:id/status', authenticate, authorize('ADMIN', 'OPERATOR'), validate(updateLotStatusDto), changeLotStatusController)
+router.patch('/:id', authenticate, authorize('ADMIN', 'OPERATOR'), validate(updateLotDto), updateLotController)
 
 
 export default router

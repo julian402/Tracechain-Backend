@@ -1,9 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
-import { createLot, findAllLots, findLotById, findLotByQrCode, updateLotStatus } from './lot.repository.js'
+import { createLot, findAllLots, findLots, findLotById, findLotByQrCode, updateLotStatus, updateLot, findLotsByFilters, findLotAncestors, findLotDescendants } from './lot.repository.js'
 import { AppError } from '../../shared/AppError.js'
 import { logAction } from '../../shared/audit.helper.js'
-import { findLotsByFilters } from './lot.repository.js'
-import { findLotAncestors, findLotDescendants } from './lot.repository.js'
 
 
 const generateCode = () => `LOT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
@@ -33,6 +31,12 @@ export const createLotService = async (data, userId) => {
 
 export const getAllLots = () => findAllLots()
 
+export const getPaginatedLots = async ({ page = 1, limit = 10, search, status } = {}) => {
+  const p = Number(page); const l = Number(limit)
+  const [data, total] = await findLots({ page: p, limit: l, search, status })
+  return { data, total, page: p, totalPages: Math.ceil(total / l) }
+}
+
 export const getLotById = async (id) => {
   const lot = await findLotById(id)
   if (!lot) throw new AppError('Lote no encontrado', 404)
@@ -52,6 +56,25 @@ export const changeLotStatus = async (id, status) => {
 }
 
 export const getLotsByFilters = (filters) => findLotsByFilters(filters)
+
+export const updateLotService = async (id, data, userId) => {
+  const lot = await findLotById(id)
+  if (!lot) throw new AppError('Lote no encontrado', 404)
+
+  const updated = await updateLot(id, data)
+
+  await logAction({
+    action: 'UPDATE',
+    entity: 'Lot',
+    entityId: id,
+    userId,
+    lotId: id,
+    oldData: lot,
+    newData: updated
+  })
+
+  return updated
+}
 
 
 export const getLotTree = async (id) => {

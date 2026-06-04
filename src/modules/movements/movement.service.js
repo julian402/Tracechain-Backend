@@ -1,4 +1,4 @@
-import { createMovement, findMovementsByLot, findAllMovements } from './movement.repository.js'
+import { createMovement, findMovementsByLot, findAllMovements, findMovements } from './movement.repository.js'
 import { findLotById } from '../lots/lot.repository.js'
 import { AppError } from '../../shared/AppError.js'
 
@@ -17,3 +17,9 @@ export const getMovementsByLot = async (lotId) => {
 }
 
 export const getAllMovements = () => findAllMovements()
+
+export const getPaginatedMovements = async ({ page = 1, limit = 10, type, lotCode, fromDate, toDate } = {}) => {
+  const p = Number(page); const l = Number(limit)
+  const [data, total] = await findMovements({ page: p, limit: l, type, lotCode, fromDate, toDate })
+  return { data, total, page: p, totalPages: Math.ceil(total / l) }
+}

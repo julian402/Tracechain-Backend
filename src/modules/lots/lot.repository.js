@@ -38,6 +38,38 @@ export const updateLotStatus = (id, status) => {
   return prisma.lot.update({ where: { id }, data: { status } })
 }
 
+export const updateLot = (id, data) => {
+  return prisma.lot.update({
+    where: { id },
+    data,
+    include: { createdBy: { select: { id: true, name: true, email: true } } }
+  })
+}
+
+export const findLots = ({ page = 1, limit = 10, search, status } = {}) => {
+  const skip = (page - 1) * limit
+  const where = {
+    ...(status && { status }),
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
+        { sanitaryRecord: { contains: search, mode: 'insensitive' } }
+      ]
+    })
+  }
+  return prisma.$transaction([
+    prisma.lot.findMany({
+      where,
+      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit
+    }),
+    prisma.lot.count({ where })
+  ])
+}
+
 export const findLotsByFilters = ({ status, search, fromDate, toDate }) => {
   return prisma.lot.findMany({
     where: {

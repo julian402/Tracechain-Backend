@@ -11,10 +11,12 @@ export const getUserById = async (id) => {
   return userWithoutPassword
 }
 
-export const updateUserService = async (id, data) => {
+export const updateUserService = async (id, data, requestorRole) => {
   const user = await findUserById(id)
   if (!user) throw new AppError('Usuario no encontrado', 404)
-  return updateUser(id, data)
+  const updateData = { ...data }
+  if (requestorRole !== 'ADMIN') delete updateData.role
+  return updateUser(id, updateData)
 }
 
 export const changePassword = async (id, { currentPassword, newPassword }) => {

@@ -27,7 +27,12 @@ export const getUserByIdController = async (req, res, next) => {
 
 export const updateUserController = async (req, res, next) => {
   try {
-    const user = await updateUserService(req.params.id, req.body)
+    const isOwn = req.user.id === req.params.id
+    const isAdmin = req.user.role === 'ADMIN'
+    if (!isOwn && !isAdmin) {
+      return next(new (await import('../../shared/appError.js')).AppError('No autorizado', 403))
+    }
+    const user = await updateUserService(req.params.id, req.body, req.user.role)
     successResponse(res, user)
   } catch (error) {
     next(error)

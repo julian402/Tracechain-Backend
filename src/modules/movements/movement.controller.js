@@ -1,4 +1,4 @@
-import { registerMovement, getMovementsByLot, getAllMovements } from './movement.service.js'
+import { registerMovement, getMovementsByLot, getAllMovements, getPaginatedMovements } from './movement.service.js'
 import { successResponse } from '../../shared/response.helper.js'
 
 export const createMovementController = async (req, res, next) => {
@@ -21,8 +21,9 @@ export const getMovementsByLotController = async (req, res, next) => {
 
 export const getAllMovementsController = async (req, res, next) => {
   try {
-    const movements = await getAllMovements()
-    successResponse(res, movements)
+    const { page = 1, limit = 10, type, lotCode, fromDate, toDate } = req.query
+    const result = await getPaginatedMovements({ page, limit, type, lotCode, fromDate, toDate })
+    successResponse(res, result)
   } catch (error) {
     next(error)
   }
