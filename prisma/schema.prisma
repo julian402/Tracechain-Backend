@@ -7,12 +7,6 @@ datasource db {
   url = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  OPERATOR
-  AUDITOR
-}
-
 enum LotStatus {
   ACTIVE
   EXPIRED
@@ -29,19 +23,115 @@ enum MovementType {
   STATUS_CHANGED
 }
 
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(OPERATOR)
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Plan {
+  id            String   @id @default(uuid())
+  key           String   @unique
+  name          String
+  description   String?
+  price         Float    @default(0)
+  currency      String   @default("USD")
+  billingPeriod String   @default("MONTHLY") // MONTHLY | YEARLY | ONE_TIME
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+
+  // Límites y features dinámicos (escalables sin migración).
+  // limits: { "lots": 10, "users": 3, ... }  (null/ausente = ilimitado)
+  // features: { "reports": true, "inspections": false, ... }
+  limits   Json @default("{}")
+  features Json @default("{}")
+
+  // Preparado para Stripe (sin uso todavía).
+  stripeProductId String?
+  stripePriceId   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  organizations Organization[]
+}
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  status    OrgStatus @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  users     User[]
+  roles     Role[]
+  lots      Lot[]
+  movements Movement[]
+  visits    Visit[]
+  auditLogs AuditLog[]
+}
+
+model Permission {
+  id     String @id @default(uuid())
+  key    String @unique
+  module String
+  action String
+  label  String
+
+  roles RolePermission[]
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@unique([organizationId, name])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  isSuperAdmin Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  roleId String?
+  role   Role?   @relation(fields: [roleId], references: [id])
 
   lots      Lot[]
   movements Movement[]
   auditLogs AuditLog[]
   visits    Visit[]
+
+  @@index([organizationId])
 }
 
 model Lot {
@@ -61,6 +151,9 @@ model Lot {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   parentLotId String?
   parentLot   Lot?    @relation("LotChildren", fields: [parentLotId], references: [id])
   childLots   Lot[]   @relation("LotChildren")
@@ -71,6 +164,8 @@ model Lot {
   movements Movement[]
   auditLogs AuditLog[]
   visits    Visit[]
+
+  @@index([organizationId])
 }
 
 model Movement {
@@ -82,11 +177,16 @@ model Movement {
   toLocation   String?
   createdAt    DateTime     @default(now())
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   lotId       String
   lot         Lot    @relation(fields: [lotId], references: [id])
 
   createdById String
   createdBy   User   @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId])
 }
 
 model AuditLog {
@@ -98,11 +198,16 @@ model AuditLog {
   newData   Json?
   createdAt DateTime @default(now())
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
   lotId String?
   lot   Lot?   @relation(fields: [lotId], references: [id])
+
+  @@index([organizationId])
 }
 
 enum VisitType {
@@ -137,6 +242,9 @@ model Visit {
   correctiveActions String?
   createdAt       DateTime  @default(now())
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   lotId           String?
   lot             Lot?      @relation(fields: [lotId], references: [id])
 
@@ -144,6 +252,8 @@ model Visit {
   createdBy       User      @relation(fields: [createdById], references: [id])
 
   findings        Finding[]
+
+  @@index([organizationId])
 }
 
 model Finding {

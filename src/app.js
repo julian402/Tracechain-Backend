@@ -11,6 +11,10 @@ import userRoutes from './modules/users/users.routes.js'
 import statsRoutes from './modules/stats/stats.routes.js'
 import inspectionRoutes from './modules/inspections/inspections.routes.js'
 import reportRoutes from './modules/reports/report.routes.js'
+import planRoutes from './modules/plans/plans.routes.js'
+import organizationRoutes from './modules/organizations/organizations.routes.js'
+import roleRoutes from './modules/roles/roles.routes.js'
+import permissionRoutes from './modules/permissions/permissions.routes.js'
 import swaggerUi from 'swagger-ui-express'
 import { swaggerSpec } from './config/swagger.js'
 
@@ -36,6 +40,10 @@ app.use('/api/users', userRoutes)
 app.use('/api/stats', statsRoutes)
 app.use('/api/inspections', inspectionRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api/plans', planRoutes)
+app.use('/api/organizations', organizationRoutes)
+app.use('/api/roles', roleRoutes)
+app.use('/api/permissions', permissionRoutes)
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 app.use(errorHandler)

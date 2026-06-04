@@ -4,12 +4,12 @@ import {
   exportMovementsCSVController,
   exportLotsPDFController
 } from './report.controller.js'
-import { authenticate, authorize } from '../../middlewares/auth.js'
+import { authenticate, requirePermission, requireFeature } from '../../middlewares/auth.js'
 
 const router = Router()
 
-router.get('/lots/csv', authenticate, authorize('ADMIN', 'AUDITOR'), exportLotsCSVController)
-router.get('/lots/pdf', authenticate, authorize('ADMIN', 'AUDITOR'), exportLotsPDFController)
-router.get('/movements/csv', authenticate, authorize('ADMIN', 'AUDITOR'), exportMovementsCSVController)
+router.get('/lots/csv', authenticate, requirePermission('reports:read'), requireFeature('reports'), exportLotsCSVController)
+router.get('/lots/pdf', authenticate, requirePermission('reports:read'), requireFeature('reports'), exportLotsPDFController)
+router.get('/movements/csv', authenticate, requirePermission('reports:read'), requireFeature('reports'), exportMovementsCSVController)
 
 export default router

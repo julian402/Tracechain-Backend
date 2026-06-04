@@ -1,9 +1,10 @@
 import prisma from '../../config/db.js'
 
-export const createVisitWithFindings = (visitData, findings, userId) => {
+export const createVisitWithFindings = (visitData, findings, userId, organizationId) => {
   return prisma.visit.create({
     data: {
       ...visitData,
+      organizationId,
       createdById: userId,
       findings: {
         create: findings
@@ -17,8 +18,9 @@ export const createVisitWithFindings = (visitData, findings, userId) => {
   })
 }
 
-export const findAllVisits = () => {
+export const findAllVisits = (organizationId) => {
   return prisma.visit.findMany({
+    where: organizationId ? { organizationId } : {},
     include: {
       findings: true,
       createdBy: { select: { id: true, name: true, email: true } },
@@ -28,9 +30,9 @@ export const findAllVisits = () => {
   })
 }
 
-export const findVisitById = (id) => {
-  return prisma.visit.findUnique({
-    where: { id },
+export const findVisitById = (id, organizationId) => {
+  return prisma.visit.findFirst({
+    where: { id, ...(organizationId && { organizationId }) },
     include: {
       findings: true,
       createdBy: { select: { id: true, name: true, email: true } },
@@ -39,9 +41,9 @@ export const findVisitById = (id) => {
   })
 }
 
-export const findVisitsByLot = (lotId) => {
+export const findVisitsByLot = (lotId, organizationId) => {
   return prisma.visit.findMany({
-    where: { lotId },
+    where: { lotId, ...(organizationId && { organizationId }) },
     include: {
       findings: true,
       createdBy: { select: { id: true, name: true, email: true } }

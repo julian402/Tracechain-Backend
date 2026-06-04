@@ -1,10 +1,10 @@
-import { register, login } from './auth.service.js'
+import { registerOrganization, login } from './auth.service.js'
 import { successResponse } from '../../shared/response.helper.js'
 
 export const registerController = async (req, res, next) => {
   try {
-    const user = await register(req.body)
-    successResponse(res, user, 201)
+    const result = await registerOrganization(req.body)
+    successResponse(res, result, 201)
   } catch (error) {
     next(error)
   }

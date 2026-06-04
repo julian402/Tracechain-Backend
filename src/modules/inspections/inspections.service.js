@@ -2,14 +2,15 @@ import { createVisitWithFindings, findAllVisits, findVisitById, findVisitsByLot 
 import { logAction } from '../../shared/audit.helper.js'
 import { AppError } from '../../shared/AppError.js'
 
-export const createVisit = async ({ findings, ...visitData }, userId) => {
-  const visit = await createVisitWithFindings(visitData, findings, userId)
+export const createVisit = async ({ findings, ...visitData }, { userId, organizationId }) => {
+  const visit = await createVisitWithFindings(visitData, findings, userId, organizationId)
 
   await logAction({
     action: 'VISITA_EXTERNA',
     entity: 'Visit',
     entityId: visit.id,
     userId,
+    organizationId,
     lotId: visit.lotId ?? null,
     newData: visit
   })
@@ -20,6 +21,7 @@ export const createVisit = async ({ findings, ...visitData }, userId) => {
       entity: 'Finding',
       entityId: finding.id,
       userId,
+      organizationId,
       lotId: visit.lotId ?? null,
       newData: finding
     })
@@ -28,12 +30,12 @@ export const createVisit = async ({ findings, ...visitData }, userId) => {
   return visit
 }
 
-export const getAllVisits = () => findAllVisits()
+export const getAllVisits = (organizationId) => findAllVisits(organizationId)
 
-export const getVisitById = async (id) => {
-  const visit = await findVisitById(id)
+export const getVisitById = async (id, organizationId) => {
+  const visit = await findVisitById(id, organizationId)
   if (!visit) throw new AppError('Visita no encontrada', 404)
   return visit
 }
 
-export const getVisitsByLot = async (lotId) => findVisitsByLot(lotId)
+export const getVisitsByLot = async (lotId, organizationId) => findVisitsByLot(lotId, organizationId)

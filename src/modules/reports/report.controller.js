@@ -2,7 +2,7 @@ import { exportLotsCSV, exportMovementsCSV, exportLotsPDF } from './report.servi
 
 export const exportLotsCSVController = async (req, res, next) => {
   try {
-    const csv = await exportLotsCSV()
+    const csv = await exportLotsCSV(req.organizationId)
     res.setHeader('Content-Type', 'text/csv')
     res.setHeader('Content-Disposition', 'attachment; filename=lotes.csv')
     res.send(csv)
@@ -13,7 +13,7 @@ export const exportLotsCSVController = async (req, res, next) => {
 
 export const exportMovementsCSVController = async (req, res, next) => {
   try {
-    const csv = await exportMovementsCSV()
+    const csv = await exportMovementsCSV(req.organizationId)
     res.setHeader('Content-Type', 'text/csv')
     res.setHeader('Content-Disposition', 'attachment; filename=movimientos.csv')
     res.send(csv)
@@ -24,7 +24,7 @@ export const exportMovementsCSVController = async (req, res, next) => {
 
 export const exportLotsPDFController = async (req, res, next) => {
   try {
-    const pdf = await exportLotsPDF()
+    const pdf = await exportLotsPDF(req.organizationId)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename=reporte-lotes.pdf')
     res.send(pdf)

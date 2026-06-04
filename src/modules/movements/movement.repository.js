@@ -10,9 +10,9 @@ export const createMovement = (data) => {
   })
 }
 
-export const findMovementsByLot = (lotId) => {
+export const findMovementsByLot = (lotId, organizationId) => {
   return prisma.movement.findMany({
-    where: { lotId },
+    where: { lotId, ...(organizationId && { organizationId }) },
     include: {
       createdBy: { select: { id: true, name: true, email: true } }
     },
@@ -20,8 +20,9 @@ export const findMovementsByLot = (lotId) => {
   })
 }
 
-export const findAllMovements = () => {
+export const findAllMovements = (organizationId) => {
   return prisma.movement.findMany({
+    where: organizationId ? { organizationId } : {},
     include: {
       createdBy: { select: { id: true, name: true, email: true } },
       lot: { select: { id: true, code: true, name: true } }
@@ -30,9 +31,10 @@ export const findAllMovements = () => {
   })
 }
 
-export const findMovements = ({ page = 1, limit = 10, type, lotCode, fromDate, toDate } = {}) => {
+export const findMovements = ({ page = 1, limit = 10, type, lotCode, fromDate, toDate, organizationId } = {}) => {
   const skip = (page - 1) * limit
   const where = {
+    ...(organizationId && { organizationId }),
     ...(type && { type }),
     ...(lotCode && { lot: { code: { contains: lotCode, mode: 'insensitive' } } }),
     ...((fromDate || toDate) && {

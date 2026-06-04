@@ -1,6 +1,6 @@
 import prisma from '../../config/db.js'
 
-export const getDashboardStats = async () => {
+export const getDashboardStats = async (organizationId) => {
   const now = new Date()
   const in7Days = new Date()
   in7Days.setDate(now.getDate() + 7)
@@ -9,6 +9,9 @@ export const getDashboardStats = async () => {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
   sixMonthsAgo.setDate(1)
   sixMonthsAgo.setHours(0, 0, 0, 0)
+
+  // super admin has no org → no tenant filter (sees all data)
+  const org = organizationId ? { organizationId } : {}
 
   const [
     totalLots,
@@ -21,18 +24,20 @@ export const getDashboardStats = async () => {
     lotsForChart,
     activeAlerts
   ] = await Promise.all([
-    prisma.lot.count(),
-    prisma.lot.count({ where: { status: 'ACTIVE' } }),
-    prisma.lot.count({ where: { status: 'EXPIRED' } }),
-    prisma.lot.count({ where: { status: 'QUARANTINE' } }),
+    prisma.lot.count({ where: { ...org } }),
+    prisma.lot.count({ where: { ...org, status: 'ACTIVE' } }),
+    prisma.lot.count({ where: { ...org, status: 'EXPIRED' } }),
+    prisma.lot.count({ where: { ...org, status: 'QUARANTINE' } }),
     prisma.lot.count({
       where: {
+        ...org,
         status: 'ACTIVE',
         expirationDate: { gte: now, lte: in7Days }
       }
     }),
-    prisma.movement.count(),
+    prisma.movement.count({ where: { ...org } }),
     prisma.lot.findMany({
+      where: { ...org },
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -40,11 +45,12 @@ export const getDashboardStats = async () => {
       }
     }),
     prisma.lot.findMany({
-      where: { createdAt: { gte: sixMonthsAgo } },
+      where: { ...org, createdAt: { gte: sixMonthsAgo } },
       select: { createdAt: true }
     }),
     prisma.lot.findMany({
       where: {
+        ...org,
         OR: [
           { status: 'EXPIRED' },
           { status: 'QUARANTINE' },

@@ -4,16 +4,17 @@ export const createLot = (data) => {
   return prisma.lot.create({ data })
 }
 
-export const findAllLots = () => {
+export const findAllLots = (organizationId) => {
   return prisma.lot.findMany({
+    where: organizationId ? { organizationId } : {},
     include: { createdBy: { select: { id: true, name: true, email: true } } },
     orderBy: { createdAt: 'desc' }
   })
 }
 
-export const findLotById = (id) => {
-  return prisma.lot.findUnique({
-    where: { id },
+export const findLotById = (id, organizationId) => {
+  return prisma.lot.findFirst({
+    where: { id, ...(organizationId && { organizationId }) },
     include: {
       createdBy: { select: { id: true, name: true, email: true } },
       parentLot: true,
@@ -23,6 +24,7 @@ export const findLotById = (id) => {
   })
 }
 
+// Público (QR): NO se filtra por organización a propósito.
 export const findLotByQrCode = (qrCode) => {
   return prisma.lot.findUnique({
     where: { qrCode },
@@ -46,9 +48,10 @@ export const updateLot = (id, data) => {
   })
 }
 
-export const findLots = ({ page = 1, limit = 10, search, status } = {}) => {
+export const findLots = ({ page = 1, limit = 10, search, status, organizationId } = {}) => {
   const skip = (page - 1) * limit
   const where = {
+    ...(organizationId && { organizationId }),
     ...(status && { status }),
     ...(search && {
       OR: [
@@ -70,9 +73,10 @@ export const findLots = ({ page = 1, limit = 10, search, status } = {}) => {
   ])
 }
 
-export const findLotsByFilters = ({ status, search, fromDate, toDate }) => {
+export const findLotsByFilters = ({ status, search, fromDate, toDate, organizationId }) => {
   return prisma.lot.findMany({
     where: {
+      ...(organizationId && { organizationId }),
       ...(status && { status }),
       ...(search && {
         OR: [

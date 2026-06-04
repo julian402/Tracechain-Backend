@@ -2,8 +2,9 @@ import { Parser } from 'json2csv'
 import PDFDocument from 'pdfkit'
 import prisma from '../../config/db.js'
 
-const getLotData = () => {
+const getLotData = (organizationId) => {
   return prisma.lot.findMany({
+    where: { organizationId },
     include: {
       createdBy: { select: { name: true, email: true } },
       movements: true
@@ -12,8 +13,9 @@ const getLotData = () => {
   })
 }
 
-const getMovementData = () => {
+const getMovementData = (organizationId) => {
   return prisma.movement.findMany({
+    where: { organizationId },
     include: {
       lot: { select: { code: true, name: true } },
       createdBy: { select: { name: true } }
@@ -22,8 +24,8 @@ const getMovementData = () => {
   })
 }
 
-export const exportLotsCSV = async () => {
-  const lots = await getLotData()
+export const exportLotsCSV = async (organizationId) => {
+  const lots = await getLotData(organizationId)
 
   const data = lots.map(lot => ({
     codigo: lot.code,
@@ -44,8 +46,8 @@ export const exportLotsCSV = async () => {
   return parser.parse(data)
 }
 
-export const exportMovementsCSV = async () => {
-  const movements = await getMovementData()
+export const exportMovementsCSV = async (organizationId) => {
+  const movements = await getMovementData(organizationId)
 
   const data = movements.map(m => ({
     lote: m.lot.code,
@@ -63,8 +65,8 @@ export const exportMovementsCSV = async () => {
   return parser.parse(data)
 }
 
-export const exportLotsPDF = async () => {
-  const lots = await getLotData()
+export const exportLotsPDF = async (organizationId) => {
+  const lots = await getLotData(organizationId)
 
   return new Promise((resolve) => {
     const doc = new PDFDocument({ margin: 40 })
