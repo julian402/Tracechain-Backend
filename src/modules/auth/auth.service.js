@@ -90,3 +90,5 @@ export const login = async ({ email, password }) => {
 
   return buildSession(user.id)
 }
+
+export const getCurrentSession = (userId) => buildSession(userId)

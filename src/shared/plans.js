@@ -53,10 +53,14 @@ export const getOrganizationLimit = (organization, key) => {
 export const buildEffectivePlan = (organization) => {
   if (!organization?.plan) return null
   const limits = { ...(organization.plan.limits ?? {}) }
+  const features = { ...(organization.plan.features ?? {}) }
   Object.entries(organization.customLimits ?? {}).forEach(([key, value]) => {
     limits[key] = value
   })
-  return { ...organization.plan, limits }
+  Object.entries(organization.customFeatures ?? {}).forEach(([key, value]) => {
+    features[key] = Boolean(value)
+  })
+  return { ...organization.plan, limits, features }
 }
 
 /** Indica si el plan incluye una feature. */

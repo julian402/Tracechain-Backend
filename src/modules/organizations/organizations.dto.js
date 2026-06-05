@@ -4,6 +4,13 @@ const limitsSchema = Joi.object().pattern(
   Joi.string(),
   Joi.alternatives().try(Joi.number().integer().min(0), Joi.valid(null))
 )
+const featuresSchema = Joi.object().pattern(Joi.string(), Joi.boolean())
+const analyticsConfigSchema = Joi.object({
+  dashboardUrl: Joi.string().uri({ scheme: ['http', 'https'] }).allow('', null).optional().messages({
+    'string.uriCustomScheme': 'La URL del dashboard debe iniciar con http:// o https://',
+    'string.uri': 'Ingresa una URL válida para el dashboard',
+  }),
+}).unknown(false)
 const slugSchema = Joi.string().lowercase().min(2).max(60).pattern(/^[a-z0-9-]+$/)
 
 export const createOrgDto = Joi.object({
@@ -23,6 +30,8 @@ export const createOrgDto = Joi.object({
     'any.required': 'Selecciona un plan',
   }),
   customLimits: limitsSchema.optional(),
+  customFeatures: featuresSchema.optional(),
+  analyticsConfig: analyticsConfigSchema.optional(),
 })
 
 export const changePlanDto = Joi.object({
@@ -59,4 +68,6 @@ export const updateAdminOrgDto = Joi.object({
     'string.guid': 'Selecciona un plan válido',
   }),
   customLimits: limitsSchema.optional(),
+  customFeatures: featuresSchema.optional(),
+  analyticsConfig: analyticsConfigSchema.optional(),
 }).min(1)

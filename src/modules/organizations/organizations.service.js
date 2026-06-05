@@ -1,7 +1,7 @@
 import prisma from '../../config/db.js'
 import { AppError } from '../../shared/AppError.js'
 import { findPlanById } from '../plans/plans.repository.js'
-import { PLAN_LIMITS, PLAN_FEATURES, getOrganizationLimit, planHasFeature } from '../../shared/plans.js'
+import { PLAN_LIMITS, PLAN_FEATURES, getOrganizationLimit, buildEffectivePlan } from '../../shared/plans.js'
 import { seedOrganizationRoles } from '../../shared/rbac.js'
 import {
   findAllOrganizations,
@@ -30,6 +30,8 @@ const toListDTO = (org) => ({
   updatedAt: org.updatedAt,
   planId: org.planId,
   customLimits: org.customLimits ?? {},
+  customFeatures: org.customFeatures ?? {},
+  analyticsConfig: org.analyticsConfig ?? {},
   plan: org.plan ? { id: org.plan.id, key: org.plan.key, name: org.plan.name } : null,
   usersCount: org._count?.users ?? 0,
   lotsCount: org._count?.lots ?? 0,
@@ -59,10 +61,12 @@ const buildUsage = async (org) => {
     }
   })
 
+  const effectivePlan = buildEffectivePlan(org)
   const features = PLAN_FEATURES.map((f) => ({
     key: f.key,
     label: f.label,
-    enabled: planHasFeature(org.plan, f.key),
+    enabled: Boolean(effectivePlan?.features?.[f.key]),
+    source: org.customFeatures?.[f.key] !== undefined ? 'organization' : 'plan',
   }))
 
   return { limits, features }
@@ -77,7 +81,23 @@ const validateCustomLimits = (customLimits = {}) => {
   return data
 }
 
-export const createOrganizationService = async ({ name, slug, planId, customLimits }) => {
+const validateCustomFeatures = (customFeatures = {}) => {
+  const data = {}
+  Object.entries(customFeatures).forEach(([key, value]) => {
+    if (!PLAN_FEATURES.some((feature) => feature.key === key)) return
+    data[key] = Boolean(value)
+  })
+  return data
+}
+
+const validateAnalyticsConfig = (analyticsConfig = {}) => {
+  const data = {}
+  const dashboardUrl = analyticsConfig.dashboardUrl?.trim()
+  if (dashboardUrl) data.dashboardUrl = dashboardUrl
+  return data
+}
+
+export const createOrganizationService = async ({ name, slug, planId, customLimits, customFeatures, analyticsConfig }) => {
   const plan = await findPlanById(planId)
   if (!plan) throw new AppError('Plan no encontrado', 404)
 
@@ -90,7 +110,14 @@ export const createOrganizationService = async ({ name, slug, planId, customLimi
 
   const org = await prisma.$transaction(async (tx) => {
     const created = await tx.organization.create({
-      data: { name, slug: finalSlug, planId, customLimits: validateCustomLimits(customLimits) }
+      data: {
+        name,
+        slug: finalSlug,
+        planId,
+        customLimits: validateCustomLimits(customLimits),
+        customFeatures: validateCustomFeatures(customFeatures),
+        analyticsConfig: validateAnalyticsConfig(analyticsConfig),
+      }
     })
     await seedOrganizationRoles(tx, created.id)
     return created
@@ -128,7 +155,7 @@ export const changeOrganizationPlan = async (id, planId) => {
   return getOrganizationDetail(updated.id)
 }
 
-export const updateOrganizationAdmin = async (id, { name, slug, planId, customLimits }) => {
+export const updateOrganizationAdmin = async (id, { name, slug, planId, customLimits, customFeatures, analyticsConfig }) => {
   const org = await findOrganizationById(id)
   if (!org) throw new AppError('Organización no encontrada', 404)
 
@@ -147,6 +174,8 @@ export const updateOrganizationAdmin = async (id, { name, slug, planId, customLi
     data.planId = planId
   }
   if (customLimits !== undefined) data.customLimits = validateCustomLimits(customLimits)
+  if (customFeatures !== undefined) data.customFeatures = validateCustomFeatures(customFeatures)
+  if (analyticsConfig !== undefined) data.analyticsConfig = validateAnalyticsConfig(analyticsConfig)
 
   const updated = await updateOrganization(id, data)
   return getOrganizationDetail(updated.id)

@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
 import { errorHandler } from './middlewares/errorHandler.js'
+import { corsOptions, notFoundHandler, securityHeaders } from './middlewares/security.js'
 import authRoutes from './modules/auth/auth.routes.js'
 import lotRoutes from './modules/lots/lot.routes.js'
 import movementRoutes from './modules/movements/movement.routes.js'
@@ -20,13 +21,11 @@ import { swaggerSpec } from './config/swagger.js'
 
 const app = express()
 
-app.use(express.json())
+app.disable('x-powered-by')
+app.use(securityHeaders)
+app.use(express.json({ limit: '1mb' }))
 app.use(morgan('dev'))
-
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}))
+app.use(cors(corsOptions))
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
@@ -45,7 +44,12 @@ app.use('/api/organizations', organizationRoutes)
 app.use('/api/roles', roleRoutes)
 app.use('/api/permissions', permissionRoutes)
 
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+const docsEnabled = process.env.API_DOCS_ENABLED === 'true' || process.env.NODE_ENV !== 'production'
+if (docsEnabled) {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+}
+
+app.use(notFoundHandler)
 app.use(errorHandler)
 
 export default app

@@ -1,5 +1,6 @@
 import { Router } from 'express'
-import { registerController, loginController } from './auth.controller.js'
+import { registerController, loginController, meController } from './auth.controller.js'
+import { authenticate } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
 import { registerOrgDto, loginDto } from './auth.dto.js'
 
@@ -61,5 +62,6 @@ router.post('/register-org', validate(registerOrgDto), registerController)
  *         description: Credenciales inválidas
  */
 router.post('/login', validate(loginDto), loginController)
+router.get('/me', authenticate, meController)
 
 export default router

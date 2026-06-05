@@ -26,7 +26,16 @@ export const findUserAccessContext = async (id) => {
         },
       },
       organization: {
-        select: { id: true, name: true, slug: true, status: true, customLimits: true, plan: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          customLimits: true,
+          customFeatures: true,
+          analyticsConfig: true,
+          plan: true,
+        },
       },
     },
   })
