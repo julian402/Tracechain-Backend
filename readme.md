@@ -1,249 +1,299 @@
-# TraceChain — Backend
+# TraceChain Backend
 
-API REST para trazabilidad de cadenas agroalimentarias. Permite registrar lotes, movimientos, transformaciones y generar códigos QR con historial público por lote.
+API REST de TraceChain, una plataforma SaaS académica para trazabilidad agroalimentaria. El sistema está diseñado para empresas que producen, transforman, almacenan, distribuyen o auditan alimentos y necesitan mantener trazabilidad por lotes, movimientos, inspecciones, auditoría y QR público.
 
-## Requisitos previos
+Este repositorio contiene el backend Node.js con Express, Prisma y PostgreSQL.
 
-Tener instalado:
-- [Node.js v20+](https://nodejs.org)
-- [pnpm](https://pnpm.io) — `npm install -g pnpm`
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+## Qué problema resuelve
 
-## Setup inicial
+TraceChain permite que una empresa agroalimentaria registre el ciclo de vida de sus lotes: creación, movimientos, transformación, inspecciones, estado sanitario y consulta pública. También permite operar como una plataforma multiempresa, donde un super admin administra organizaciones, planes, usuarios globales, roles, permisos y cupos.
 
-### 1. Clonar el repositorio
+## Funcionalidades principales
 
-```bash
-git clone https://github.com/julian402/tracechain.git
-cd tracechain-backend
-```
+- Registro de organizaciones y administrador inicial.
+- Login con JWT.
+- Multi-tenancy por organización.
+- Roles y permisos dinámicos por organización.
+- Super admin para administrar toda la plataforma.
+- Lotes con estado, cantidad, fechas, trazabilidad y QR.
+- Movimientos de lotes con filtros y paginación.
+- Auditoría de acciones relevantes.
+- Inspecciones y hallazgos.
+- Reportes CSV/PDF de lotes y movimientos.
+- Dashboard con KPIs, alertas y datos para gráficos.
+- Planes con límites y features dinámicos.
+- Límites personalizados por organización (`customLimits`) para no depender solo del plan.
+- Validación centralizada con mensajes claros para el usuario.
+- Documentación Swagger en `/api/docs`.
 
-### 2. Instalar dependencias
+## Stack
 
-```bash
-pnpm install
-pnpm approve-builds
-```
-
-### 3. Crear el archivo de variables de entorno
-
-```bash
-cp .env.example .env
-```
-
-### 4. Levantar la base de datos
-
-```bash
-docker compose up -d
-```
-
-### 5. Correr las migraciones
-
-```bash
-pnpm dlx prisma@6 migrate dev
-```
-
-### 6. Cargar datos iniciales
-
-```bash
-pnpm prisma:seed
-```
-
-Crea un usuario administrador: `admin@tracechain.com` / `admin123`
-
-### 7. Arrancar el servidor
-
-```bash
-pnpm dev
-```
-
-Servidor en `http://localhost:3000`. Verificar:
-```bash
-curl http://localhost:3000/health
-# { "status": "ok" }
-```
-
----
-
-## Scripts disponibles
-
-| Comando | Descripción |
+| Área | Tecnología |
 |---|---|
-| `pnpm dev` | Servidor en modo desarrollo con hot reload |
-| `pnpm start` | Servidor en producción |
-| `pnpm test` | Correr tests en modo watch |
-| `pnpm test:coverage` | Tests con reporte de cobertura |
-| `docker compose up -d` | Levantar base de datos |
-| `docker compose down` | Apagar base de datos |
-| `docker compose logs -f db` | Ver logs de la BD en tiempo real |
-| `pnpm dlx prisma@6 migrate dev` | Correr migraciones |
-| `pnpm dlx prisma@6 studio` | UI visual de la BD (localhost:5555) |
-| `pnpm prisma:seed` | Cargar datos iniciales |
+| Runtime | Node.js ES Modules |
+| API | Express 5 |
+| Base de datos | PostgreSQL |
+| ORM | Prisma 6 |
+| Auth | JWT + bcryptjs |
+| Validación | Joi |
+| Reportes | json2csv + PDFKit |
+| QR | qrcode |
+| Logs HTTP | morgan |
+| Tests | Vitest + Supertest |
+| Package manager | pnpm |
 
----
+## Arquitectura
 
-## Endpoints
+El backend está organizado por módulos de dominio. Cada módulo separa rutas, controladores, servicios, repositorios y DTOs cuando aplica.
 
-### Auth — `/api/auth`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| POST | `/register` | Registrar usuario | No |
-| POST | `/login` | Iniciar sesión | No |
-
-### Lotes — `/api/lots`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/` | Listar todos los lotes | Token |
-| GET | `/search?status=&search=&fromDate=&toDate=` | Filtrar lotes | Token |
-| GET | `/:id` | Obtener lote por ID | Token |
-| GET | `/:id/tree` | Árbol de trazabilidad (padres e hijos) | Token |
-| GET | `/public/:qrCode` | Vista pública del lote (sin login) | No |
-| POST | `/` | Crear lote | ADMIN, OPERATOR |
-| PATCH | `/:id/status` | Cambiar estado del lote | ADMIN, OPERATOR |
-
-### Movimientos — `/api/movements`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/` | Listar todos los movimientos | Token |
-| GET | `/lot/:lotId` | Movimientos de un lote | Token |
-| POST | `/` | Registrar movimiento | ADMIN, OPERATOR |
-
-### QR — `/api/qr`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/:qrCode` | Generar imagen QR en base64 | Token |
-
-### Auditoría — `/api/audit`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/` | Listar todos los logs | ADMIN, AUDITOR |
-| GET | `/search?action=&userId=&lotId=&fromDate=&toDate=` | Filtrar logs | ADMIN, AUDITOR |
-| GET | `/lot/:lotId` | Logs de un lote | ADMIN, AUDITOR |
-| GET | `/user/:userId` | Logs de un usuario | ADMIN, AUDITOR |
-
-### Usuarios — `/api/users`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/` | Listar usuarios | ADMIN |
-| GET | `/:id` | Obtener usuario | Token |
-| PATCH | `/:id` | Actualizar usuario | ADMIN |
-| PATCH | `/:id/password` | Cambiar contraseña | Token |
-| DELETE | `/:id` | Eliminar usuario | ADMIN |
-
-### Estadísticas — `/api/stats`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/dashboard` | KPIs, lotes recientes y alertas | Token |
-
-### Inspecciones — `/api/inspections`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/` | Listar inspecciones | ADMIN, AUDITOR |
-| GET | `/:id` | Obtener inspección | Token |
-| GET | `/lot/:lotId` | Inspecciones de un lote | Token |
-| POST | `/` | Crear inspección con hallazgos | ADMIN, AUDITOR, OPERATOR |
-
-### Reportes — `/api/reports`
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| GET | `/lots/csv` | Exportar lotes en CSV | ADMIN, AUDITOR |
-| GET | `/lots/pdf` | Exportar lotes en PDF | ADMIN, AUDITOR |
-| GET | `/movements/csv` | Exportar movimientos en CSV | ADMIN, AUDITOR |
-
----
-
-## Roles
-
-| Rol | Descripción |
-|---|---|
-| `ADMIN` | Acceso total |
-| `OPERATOR` | Crear lotes, movimientos e inspecciones |
-| `AUDITOR` | Solo lectura, reportes y auditoría |
-
----
-
-## Flujo de trabajo Git
-
-```
-main      → código estable / entregas
-develop   → integración del equipo
-feature/* → trabajo individual por módulo
-```
-
-Nunca hacer push directo a `main` o `develop`. Todo va por Pull Request.
-
-```bash
-# Antes de empezar a trabajar
-git checkout develop
-git pull origin develop
-git checkout -b feature/nombre-de-la-tarea
-
-# Al terminar
-git push origin feature/nombre-de-la-tarea
-# → abrir PR hacia develop en GitHub
-```
-
-### Convención de commits
-
-```
-feat: descripción      → nueva funcionalidad
-fix: descripción       → corrección de bug
-chore: descripción     → configuración, dependencias
-docs: descripción      → documentación
-test: descripción      → tests
-```
-
----
-
-## Estructura del proyecto
-
-```
+```txt
 tracechain-backend/
 ├── prisma/
-│   ├── schema.prisma       # esquema de la BD
-│   ├── migrations/         # historial de migraciones
-│   └── seed.js             # datos iniciales
+│   ├── schema.prisma          # Modelo de datos
+│   ├── migrations/            # Migraciones SQL
+│   └── seed.js                # Datos iniciales
 ├── src/
-│   ├── config/
-│   │   ├── db.js           # instancia de Prisma
-│   │   └── logger.js
-│   ├── middlewares/
-│   │   ├── auth.js         # verificación JWT y roles
-│   │   ├── validate.js     # validación de DTOs con Joi
-│   │   └── errorHandler.js
+│   ├── config/                # Prisma, Swagger, logger
+│   ├── middlewares/           # Auth, validación, errores
 │   ├── modules/
-│   │   ├── auth/
-│   │   ├── lots/
-│   │   ├── movements/
-│   │   ├── qr/
-│   │   ├── audit/
-│   │   ├── users/
-│   │   ├── stats/
-│   │   ├── inspections/
-│   │   └── reports/
-│   ├── shared/
-│   │   ├── AppError.js
-│   │   ├── audit.helper.js
-│   │   └── response.helper.js
-│   └── app.js
-├── tests/
-│   ├── unit/
-│   └── integration/
+│   │   ├── auth/              # Registro/login
+│   │   ├── organizations/     # Organizaciones y límites
+│   │   ├── plans/             # Planes, límites y features base
+│   │   ├── roles/             # Roles dinámicos
+│   │   ├── permissions/       # Catálogo de permisos
+│   │   ├── users/             # Usuarios de org y globales
+│   │   ├── lots/              # Lotes y trazabilidad
+│   │   ├── movements/         # Movimientos
+│   │   ├── inspections/       # Visitas y hallazgos
+│   │   ├── audit/             # Bitácora
+│   │   ├── reports/           # CSV/PDF
+│   │   ├── stats/             # KPIs dashboard
+│   │   └── qr/                # QR base64
+│   ├── shared/                # Helpers, RBAC, planes, auditoría
+│   └── app.js                 # Registro de middlewares y rutas
 ├── server.js
 ├── docker-compose.yml
-├── .env.example
 └── package.json
 ```
 
----
+## Modelo de negocio
+
+TraceChain funciona como una plataforma multiempresa:
+
+- Una organización representa una empresa cliente.
+- Cada organización tiene usuarios, roles, permisos, lotes, movimientos, visitas y auditoría propios.
+- Un plan define límites base como `lots`, `users` o `movements`, y features como reportes, analítica o inspecciones.
+- Una organización puede tener `customLimits` para modificar sus cupos sin crear un plan nuevo.
+- El super admin administra la plataforma completa.
+
+Ejemplo: una empresa puede estar en plan `FREE`, pero el super admin puede asignarle 20 lotes y 5 usuarios temporalmente mediante límites personalizados.
+
+## Auth, roles y permisos
+
+El backend usa JWT. En cada request se carga el contexto del usuario:
+
+- `isSuperAdmin`
+- organización actual
+- rol asignado
+- permisos efectivos
+- plan efectivo con límites personalizados aplicados
+
+Tipos de acceso:
+
+| Acceso | Descripción |
+|---|---|
+| Super Admin | Acceso total a la plataforma |
+| ORG_ADMIN | Administración dentro de su organización |
+| GERENTE | Gestión operativa amplia |
+| OPERARIO | Registro operativo de lotes y movimientos |
+| AUDITOR | Lectura, auditoría, inspecciones y reportes |
+
+Los roles son dinámicos y sus permisos se administran desde la UI.
+
+## Validación y errores
+
+El middleware `validate` centraliza validación con Joi y responde errores estructurados:
+
+```json
+{
+  "status": "error",
+  "message": "La cantidad debe ser mayor que cero",
+  "details": [
+    { "field": "quantity", "message": "La cantidad debe ser mayor que cero" }
+  ]
+}
+```
+
+Esto permite que el frontend muestre mensajes claros al crear o editar lotes, usuarios, organizaciones, movimientos, planes y credenciales.
+
+Reglas importantes:
+
+- Email válido.
+- Contraseña fuerte: mínimo 8 caracteres, una mayúscula, una minúscula y un número.
+- Slug normalizado a minúsculas y guiones.
+- Fechas de lote coherentes.
+- Cantidades positivas.
+- Límites numéricos enteros.
+
+## Endpoints principales
+
+### Auth `/api/auth`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/register` | Registra organización y administrador |
+| POST | `/register-org` | Alias compatible de registro |
+| POST | `/login` | Inicia sesión |
+
+### Organizaciones `/api/organizations`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/` | Lista organizaciones, solo super admin |
+| POST | `/` | Crea organización, solo super admin |
+| GET | `/me` | Datos y uso de la organización actual |
+| PATCH | `/me` | Edita datos básicos de la organización actual |
+| GET | `/:id` | Detalle de organización |
+| PATCH | `/:id` | Edita nombre, slug, plan y límites personalizados |
+| PATCH | `/:id/plan` | Cambia plan base |
+| PATCH | `/:id/status` | Activa o suspende organización |
+
+### Planes `/api/plans`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/` | Lista planes |
+| GET | `/catalog` | Catálogo de límites, features y periodos |
+| POST | `/` | Crea plan |
+| PATCH | `/:id` | Edita plan |
+| DELETE | `/:id` | Elimina plan si no tiene organizaciones |
+
+### Roles y permisos
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/roles` | Lista roles de una organización |
+| POST | `/api/roles` | Crea rol |
+| PATCH | `/api/roles/:id` | Edita rol |
+| PUT | `/api/roles/:id/permissions` | Actualiza permisos del rol |
+| PUT | `/api/roles/:id/users` | Asigna usuarios a un rol |
+| DELETE | `/api/roles/:id` | Elimina rol sin usuarios |
+| GET | `/api/permissions` | Catálogo de permisos agrupados |
+
+### Usuarios `/api/users`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/` | Lista usuarios de organización o globales con `scope=all` |
+| POST | `/` | Crea usuario |
+| GET | `/:id` | Obtiene usuario |
+| PATCH | `/:id` | Edita nombre, rol, organización o super admin según permisos |
+| PATCH | `/:id/password` | Cambia contraseña propia |
+| DELETE | `/:id` | Elimina usuario |
+
+### Lotes `/api/lots`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/` | Lista paginada con filtros |
+| POST | `/` | Crea lote |
+| GET | `/:id` | Detalle del lote |
+| PATCH | `/:id` | Edita lote |
+| PATCH | `/:id/status` | Cambia estado |
+| GET | `/:id/tree` | Árbol de trazabilidad |
+| GET | `/public/:qrCode` | Consulta pública por QR |
+
+### Movimientos `/api/movements`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/` | Lista paginada con filtros |
+| POST | `/` | Crea movimiento |
+| GET | `/lot/:lotId` | Movimientos de un lote |
+
+### Inspecciones `/api/inspections`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/` | Lista inspecciones |
+| POST | `/` | Crea visita con hallazgos |
+| GET | `/:id` | Detalle de inspección |
+| GET | `/lot/:lotId` | Inspecciones de un lote |
+
+### Auditoría, reportes, QR y stats
+
+| Módulo | Rutas clave |
+|---|---|
+| Audit | `GET /api/audit`, filtros por acción, usuario, lote y fecha |
+| Reports | `GET /api/reports/lots/csv`, `/lots/pdf`, `/movements/csv`, `/movements/pdf` |
+| QR | `GET /api/qr/:qrCode` |
+| Stats | `GET /api/stats/dashboard` |
+| Docs | `GET /api/docs` |
 
 ## Variables de entorno
 
-| Variable | Descripción |
+Crear `.env` desde `.env.example`:
+
+```env
+PORT=3000
+DATABASE_URL=postgresql://user:password@localhost:5432/tracechain
+JWT_SECRET=change-me
+JWT_EXPIRES_IN=7d
+NODE_ENV=development
+PUBLIC_URL=http://localhost:5173
+```
+
+## Instalación local
+
+```bash
+pnpm install
+cp .env.example .env
+docker compose up -d
+pnpm prisma:migrate
+pnpm prisma:seed
+pnpm dev
+```
+
+Servidor:
+
+```txt
+http://localhost:3000
+```
+
+Health check:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Swagger:
+
+```txt
+http://localhost:3000/api/docs
+```
+
+## Scripts
+
+| Comando | Descripción |
 |---|---|
-| `PORT` | Puerto del servidor (default: 3000) |
-| `DATABASE_URL` | URL de conexión a PostgreSQL |
-| `JWT_SECRET` | Secreto para firmar tokens JWT |
-| `JWT_EXPIRES_IN` | Duración del token (ej: `7d`) |
-| `NODE_ENV` | `development` o `production` |
-| `PUBLIC_URL` | URL base para links de QR (ej: `http://localhost:3000`) |
+| `pnpm dev` | Servidor con `node --watch` |
+| `pnpm start` | Servidor en modo producción |
+| `pnpm test` | Tests con Vitest |
+| `pnpm test:coverage` | Coverage |
+| `pnpm prisma:migrate` | Ejecuta migraciones |
+| `pnpm prisma:generate` | Regenera Prisma Client |
+| `pnpm prisma:studio` | Abre Prisma Studio |
+| `pnpm prisma:seed` | Carga datos iniciales |
+
+## Datos iniciales
+
+El seed crea planes base, permisos, roles de sistema y usuarios iniciales para desarrollo. Después de ejecutar `pnpm prisma:seed`, revisar `prisma/seed.js` para credenciales exactas si cambian.
+
+## Notas de desarrollo
+
+- Usar `pnpm`, no `npm`, porque el proyecto declara `devEngines`.
+- Después de modificar `schema.prisma`, ejecutar migración y regenerar Prisma Client.
+- Si `pnpm prisma generate` falla en Windows por bloqueo del DLL, cerrar procesos Node que usen Prisma y reintentar.
+- Los límites efectivos salen de `Organization.customLimits` si existen; si no, se usa `Plan.limits`.
+- El super admin puede inspeccionar organizaciones con `?organizationId=`.
+
