@@ -21,18 +21,21 @@ const OTP_TTL_MS = 10 * 60 * 1000 // 10 minutos
 /** Genera un código OTP de 6 dígitos en texto plano. */
 const generateOtpCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
 
-/** Envía el código OTP por correo; lanza 502 si el envío falla. */
-const sendOtpEmail = async (to, name, code) => {
-  try {
-    await sendEmail({
-      to,
-      subject: 'Tu código de acceso a TraceChain',
-      html: otpCodeEmail({ name, code }),
-    })
-  } catch (error) {
+/**
+ * Envía el código OTP por correo en segundo plano (fire-and-forget): NO se hace
+ * await, porque el SMTP de Gmail puede tardar varios segundos y el cliente
+ * cortaría la petición por timeout. El código ya quedó guardado antes de llamar
+ * a esto, así que la respuesta se devuelve de inmediato y el correo llega poco
+ * después. Si el envío falla solo se loggea (el usuario puede reenviar).
+ */
+const dispatchOtpEmail = (to, name, code) => {
+  sendEmail({
+    to,
+    subject: 'Tu código de acceso a TraceChain',
+    html: otpCodeEmail({ name, code }),
+  }).catch((error) => {
     console.error('No se pudo enviar el código OTP:', error.message)
-    throw new AppError('No se pudo enviar el código de verificación. Intenta de nuevo.', 502)
-  }
+  })
 }
 
 /** Genera un código OTP, lo guarda (hasheado) en el usuario y lo envía. */
@@ -40,7 +43,7 @@ const issueOtp = async (user) => {
   const code = generateOtpCode()
   const hashed = await bcrypt.hash(code, 10)
   await setUserOtp(user.id, hashed, new Date(Date.now() + OTP_TTL_MS))
-  await sendOtpEmail(user.email, user.name, code)
+  dispatchOtpEmail(user.email, user.name, code)
 }
 
 const slugify = (str) =>
@@ -110,7 +113,7 @@ export const startRegistration = async ({ organizationName, slug: requestedSlug,
     otpExpiresAt: new Date(Date.now() + OTP_TTL_MS),
   })
 
-  await sendOtpEmail(email, name, code)
+  dispatchOtpEmail(email, name, code)
   return { otpRequired: true, email }
 }
 
@@ -181,7 +184,7 @@ export const resendRegistrationOtp = async ({ email }) => {
       otpCode: hashedCode,
       otpExpiresAt: new Date(Date.now() + OTP_TTL_MS),
     })
-    await sendOtpEmail(email, pending.name, code)
+    dispatchOtpEmail(email, pending.name, code)
   }
   return { otpRequired: true, email }
 }
