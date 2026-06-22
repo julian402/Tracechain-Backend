@@ -45,3 +45,25 @@ export const loginDto = Joi.object({
     'any.required': 'La contraseña es obligatoria',
   }),
 })
+
+export const verifyOtpDto = Joi.object({
+  email: Joi.string().email({ tlds: { allow: false } }).required().messages({
+    'string.empty': 'El correo electrónico es obligatorio',
+    'string.email': 'Ingresa un correo electrónico válido',
+    'any.required': 'El correo electrónico es obligatorio',
+  }),
+  code: Joi.string().length(6).pattern(/^\d+$/).required().messages({
+    'string.empty': 'El código es obligatorio',
+    'string.length': 'El código debe tener 6 dígitos',
+    'string.pattern.base': 'El código solo puede contener números',
+    'any.required': 'El código es obligatorio',
+  }),
+})
+
+export const resendOtpDto = Joi.object({
+  email: Joi.string().email({ tlds: { allow: false } }).required().messages({
+    'string.empty': 'El correo electrónico es obligatorio',
+    'string.email': 'Ingresa un correo electrónico válido',
+    'any.required': 'El correo electrónico es obligatorio',
+  }),
+})

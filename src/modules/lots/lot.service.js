@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import { createLot, findAllLots, findLots, findLotById, findLotByQrCode, updateLotStatus, updateLot, findLotsByFilters, findLotAncestors, findLotDescendants } from './lot.repository.js'
+import prisma from '../../config/db.js'
 import { AppError } from '../../shared/AppError.js'
 import { logAction } from '../../shared/audit.helper.js'
 
@@ -15,7 +16,22 @@ export const createLotService = async (data, { userId, organizationId }) => {
     if (!parent) throw new AppError('Lote padre no encontrado', 404)
   }
 
-  const lot = await createLot({ ...data, code, qrCode, organizationId, createdById: userId })
+  // El proveedor (si se indica) debe pertenecer a la organización.
+  if (data.supplierId) {
+    const supplier = await prisma.supplier.findFirst({ where: { id: data.supplierId, organizationId } })
+    if (!supplier) throw new AppError('Proveedor no encontrado', 404)
+  }
+
+  // Cada materia prima usada debe existir dentro de la organización.
+  if (data.ingredients?.length) {
+    const ids = [...new Set(data.ingredients.map((i) => i.rawMaterialBatchId))]
+    const count = await prisma.rawMaterialBatch.count({ where: { id: { in: ids }, organizationId } })
+    if (count !== ids.length) throw new AppError('Una o más materias primas no son válidas', 404)
+  }
+
+  const created = await createLot({ ...data, code, qrCode, organizationId, createdById: userId })
+  // Relee con sus relaciones (proveedor, ingredientes) para devolver el detalle completo.
+  const lot = await findLotById(created.id, organizationId)
 
   await logAction({
     action: 'CREATE',

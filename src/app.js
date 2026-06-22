@@ -16,6 +16,8 @@ import planRoutes from './modules/plans/plans.routes.js'
 import organizationRoutes from './modules/organizations/organizations.routes.js'
 import roleRoutes from './modules/roles/roles.routes.js'
 import permissionRoutes from './modules/permissions/permissions.routes.js'
+import supplierRoutes from './modules/suppliers/suppliers.routes.js'
+import rawMaterialRoutes from './modules/raw-materials/rawMaterials.routes.js'
 import swaggerUi from 'swagger-ui-express'
 import { swaggerSpec } from './config/swagger.js'
 
@@ -43,6 +45,8 @@ app.use('/api/plans', planRoutes)
 app.use('/api/organizations', organizationRoutes)
 app.use('/api/roles', roleRoutes)
 app.use('/api/permissions', permissionRoutes)
+app.use('/api/suppliers', supplierRoutes)
+app.use('/api/raw-materials', rawMaterialRoutes)
 
 const docsEnabled = process.env.API_DOCS_ENABLED === 'true' || process.env.NODE_ENV !== 'production'
 if (docsEnabled) {

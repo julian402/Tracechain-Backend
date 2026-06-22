@@ -10,15 +10,17 @@ TraceChain permite que una empresa agroalimentaria registre el ciclo de vida de 
 
 ## Funcionalidades principales
 
-- Registro de organizaciones y administrador inicial.
-- Login con JWT.
+- Registro de organizaciones con verificación de correo: la organización y el administrador no se crean hasta confirmar el código enviado por correo.
+- Login con JWT y verificación en dos pasos (2FA por código al correo, obligatoria).
+- Servicio de correo por Gmail SMTP (Nodemailer) para códigos OTP y notificaciones.
 - Multi-tenancy por organización.
 - Roles y permisos dinámicos por organización.
 - Super admin para administrar toda la plataforma.
 - Lotes con estado, cantidad, fechas, trazabilidad y QR.
 - Movimientos de lotes con filtros y paginación.
 - Auditoría de acciones relevantes.
-- Inspecciones y hallazgos.
+- Inspecciones con responsable asignado (usuario real), estado de seguimiento (pendiente, en curso, resuelto), detalle de hallazgos y notificación por correo al responsable.
+- Inventario de materias primas y proveedores, con consumo de ingredientes trazado hacia el producto terminado (lote).
 - Reportes CSV/PDF de lotes y movimientos.
 - Dashboard con KPIs, alertas y datos para gráficos.
 - Planes con límites y features dinámicos.
@@ -35,6 +37,7 @@ TraceChain permite que una empresa agroalimentaria registre el ciclo de vida de 
 | Base de datos | PostgreSQL |
 | ORM | Prisma 6 |
 | Auth | JWT + bcryptjs |
+| Correo | Nodemailer (Gmail SMTP) |
 | Validación | Joi |
 | Reportes | json2csv + PDFKit |
 | QR | qrcode |
@@ -56,7 +59,7 @@ tracechain-backend/
 │   ├── config/                # Prisma, Swagger, logger
 │   ├── middlewares/           # Auth, validación, errores
 │   ├── modules/
-│   │   ├── auth/              # Registro/login
+│   │   ├── auth/              # Registro con verificación, login y 2FA (OTP)
 │   │   ├── organizations/     # Organizaciones y límites
 │   │   ├── plans/             # Planes, límites y features base
 │   │   ├── roles/             # Roles dinámicos
@@ -64,12 +67,14 @@ tracechain-backend/
 │   │   ├── users/             # Usuarios de org y globales
 │   │   ├── lots/              # Lotes y trazabilidad
 │   │   ├── movements/         # Movimientos
-│   │   ├── inspections/       # Visitas y hallazgos
+│   │   ├── inspections/       # Visitas, hallazgos, responsable y estado
+│   │   ├── suppliers/         # Proveedores de materias primas
+│   │   ├── raw-materials/     # Lotes de materia prima (inventario)
 │   │   ├── audit/             # Bitácora
 │   │   ├── reports/           # CSV/PDF
 │   │   ├── stats/             # KPIs dashboard
 │   │   └── qr/                # QR base64
-│   ├── shared/                # Helpers, RBAC, planes, auditoría
+│   ├── shared/                # Helpers, RBAC, planes, auditoría, correo (email/)
 │   └── app.js                 # Registro de middlewares y rutas
 ├── server.js
 ├── docker-compose.yml
@@ -141,9 +146,13 @@ Reglas importantes:
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/register` | Registra organización y administrador |
-| POST | `/register-org` | Alias compatible de registro |
-| POST | `/login` | Inicia sesión |
+| POST | `/register` | Paso 1 del registro: valida datos y envía código al correo (no crea nada todavía) |
+| POST | `/register-org` | Alias compatible del paso 1 de registro |
+| POST | `/register/verify` | Paso 2: valida el código y recién entonces crea la organización y el administrador |
+| POST | `/register/resend` | Reenvía el código de verificación de un registro pendiente |
+| POST | `/login` | Paso 1 del login: valida credenciales y envía código 2FA al correo |
+| POST | `/verify-otp` | Paso 2 del login: valida el código y devuelve la sesión |
+| POST | `/resend-otp` | Reenvía el código 2FA del login |
 
 ### Organizaciones `/api/organizations`
 
@@ -215,10 +224,26 @@ Reglas importantes:
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/` | Lista inspecciones |
-| POST | `/` | Crea visita con hallazgos |
-| GET | `/:id` | Detalle de inspección |
+| GET | `/` | Lista inspecciones, con filtros por estado y `mine=true` (mis pendientes) |
+| POST | `/` | Crea visita con hallazgos y responsable; notifica por correo al responsable |
+| GET | `/:id` | Detalle de inspección con responsable, hallazgos y autor |
+| PATCH | `/:id/status` | Cambia el estado de seguimiento (pendiente, en curso, resuelto) |
 | GET | `/lot/:lotId` | Inspecciones de un lote |
+
+### Inventario `/api/suppliers` y `/api/raw-materials`
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/suppliers` | Lista proveedores de la organización |
+| POST | `/api/suppliers` | Crea proveedor |
+| PATCH | `/api/suppliers/:id` | Edita proveedor |
+| DELETE | `/api/suppliers/:id` | Elimina proveedor |
+| GET | `/api/raw-materials` | Lista lotes de materia prima |
+| POST | `/api/raw-materials` | Registra lote de materia prima |
+| PATCH | `/api/raw-materials/:id` | Edita lote de materia prima |
+| DELETE | `/api/raw-materials/:id` | Elimina lote de materia prima |
+
+Al crear un lote (`POST /api/lots`) se puede enviar `supplierId` e `ingredients[]` (materias primas usadas con cantidad), construyendo la trazabilidad de producto a materia prima.
 
 ### Auditoría, reportes, QR y stats
 
@@ -241,6 +266,15 @@ JWT_SECRET=change-me
 JWT_EXPIRES_IN=7d
 NODE_ENV=development
 PUBLIC_URL=http://localhost:5173
+APP_URL=http://localhost:5173
+
+# Correo (Gmail SMTP vía Nodemailer). Sin GMAIL_USER/GMAIL_APP_PASSWORD
+# los correos se simulan en consola (útil en desarrollo).
+# GMAIL_APP_PASSWORD es una contraseña de aplicación de Google
+# (https://myaccount.google.com/apppasswords), no la contraseña normal.
+GMAIL_USER=
+GMAIL_APP_PASSWORD=
+MAIL_FROM=TraceChain <tu-correo@gmail.com>
 ```
 
 ## Instalación local

@@ -7,6 +7,7 @@ import {
   SUPER_ADMIN_ROLE_NAME,
   OWNER_ROLE_NAME,
   seedOrganizationRoles,
+  syncSystemRolePermissions,
 } from '../src/shared/rbac.js'
 
 const prisma = new PrismaClient()
@@ -60,6 +61,9 @@ async function main() {
   }
   const permissions = await prisma.permission.findMany()
   const permByKey = Object.fromEntries(permissions.map((p) => [p.key, p.id]))
+
+  // 2b. Propaga permisos nuevos a los roles de sistema de organizaciones ya existentes.
+  await syncSystemRolePermissions(prisma)
 
   // 3. Rol global SUPER_ADMIN (sin organización) — rol de sistema (no usado para permisos, sí para display)
   let superRole = await prisma.role.findFirst({

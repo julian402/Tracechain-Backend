@@ -4,11 +4,18 @@ import jwt from 'jsonwebtoken'
 
 vi.mock('../../src/modules/auth/auth.repository.js', () => ({
   findUserByEmail: vi.fn(),
-  createUser: vi.fn()
+  createUser: vi.fn(),
+  setUserOtp: vi.fn(),
+  clearUserOtp: vi.fn()
+}))
+
+// El servicio de correo se simula a consola en tests (sin RESEND_API_KEY).
+vi.mock('../../src/shared/email/email.service.js', () => ({
+  sendEmail: vi.fn().mockResolvedValue({ simulated: true })
 }))
 
 import { register, login } from '../../src/modules/auth/auth.service.js'
-import { findUserByEmail, createUser } from '../../src/modules/auth/auth.repository.js'
+import { findUserByEmail, createUser, setUserOtp } from '../../src/modules/auth/auth.repository.js'
 
 describe('auth.service', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -48,7 +55,7 @@ describe('auth.service', () => {
   })
 
   describe('login', () => {
-    it('debe retornar token si las credenciales son correctas', async () => {
+    it('debe enviar un código OTP si las credenciales son correctas (2FA)', async () => {
       const hashed = await bcrypt.hash('123456', 10)
       findUserByEmail.mockResolvedValue({
         id: '123',
@@ -65,8 +72,10 @@ describe('auth.service', () => {
 
       const result = await login({ email: 'julian@test.com', password: '123456' })
 
-      expect(result).toHaveProperty('token')
-      expect(result.user).not.toHaveProperty('password')
+      // Ahora el login es de dos pasos: no devuelve token, solicita el código.
+      expect(result).toEqual({ otpRequired: true, email: 'julian@test.com' })
+      expect(result).not.toHaveProperty('token')
+      expect(setUserOtp).toHaveBeenCalledOnce()
     })
 
     it('debe lanzar error si el usuario no existe', async () => {

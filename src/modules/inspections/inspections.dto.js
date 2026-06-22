@@ -8,7 +8,7 @@ export const createVisitDto = Joi.object({
   auditorName: Joi.string().required(),
   auditedProcess: Joi.string().optional(),
   objective: Joi.string().optional(),
-  responsible: Joi.string().optional(),
+  responsibleId: Joi.string().uuid().optional().messages({ 'string.guid': 'El responsable seleccionado no es válido' }),
   commitmentDate: Joi.date().optional(),
   correctiveActions: Joi.string().optional(),
   lotId: Joi.string().uuid().optional(),
@@ -21,4 +21,11 @@ export const createVisitDto = Joi.object({
       deadline: Joi.date().optional()
     })
   ).min(1).required()
+})
+
+export const updateVisitStatusDto = Joi.object({
+  status: Joi.string().valid('PENDIENTE', 'EN_CURSO', 'RESUELTO').required().messages({
+    'any.only': 'Selecciona un estado válido',
+    'any.required': 'El estado es obligatorio',
+  })
 })

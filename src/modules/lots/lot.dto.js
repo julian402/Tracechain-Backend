@@ -35,7 +35,25 @@ export const createLotDto = Joi.object({
     'number.max': 'La humedad no puede ser mayor que 100',
   }),
   notes: Joi.string().optional(),
-  parentLotId: Joi.string().uuid().optional().messages({ 'string.guid': 'El lote padre no es válido' })
+  parentLotId: Joi.string().uuid().optional().messages({ 'string.guid': 'El lote padre no es válido' }),
+  supplierId: Joi.string().uuid().allow(null, '').optional().messages({ 'string.guid': 'El proveedor no es válido' }),
+  ingredients: Joi.array().items(
+    Joi.object({
+      rawMaterialBatchId: Joi.string().uuid().required().messages({
+        'string.guid': 'La materia prima no es válida',
+        'any.required': 'Selecciona la materia prima utilizada',
+      }),
+      quantityUsed: Joi.number().positive().required().messages({
+        'number.base': 'La cantidad usada debe ser un número',
+        'number.positive': 'La cantidad usada debe ser mayor que cero',
+        'any.required': 'La cantidad usada es obligatoria',
+      }),
+      unit: Joi.string().max(20).required().messages({
+        'string.empty': 'La unidad es obligatoria',
+        'any.required': 'La unidad es obligatoria',
+      }),
+    })
+  ).optional()
 })
 
 export const updateLotStatusDto = Joi.object({

@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import { registerController, loginController, meController } from './auth.controller.js'
+import { registerController, verifyRegistrationController, resendRegistrationController, loginController, verifyOtpController, resendOtpController, meController } from './auth.controller.js'
 import { authenticate } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
-import { registerOrgDto, loginDto } from './auth.dto.js'
+import { registerOrgDto, loginDto, verifyOtpDto, resendOtpDto } from './auth.dto.js'
 
 const router = Router()
 
@@ -36,6 +36,8 @@ const router = Router()
  */
 router.post('/register', validate(registerOrgDto), registerController)
 router.post('/register-org', validate(registerOrgDto), registerController)
+router.post('/register/verify', validate(verifyOtpDto), verifyRegistrationController)
+router.post('/register/resend', validate(resendOtpDto), resendRegistrationController)
 
 /**
  * @swagger
@@ -62,6 +64,8 @@ router.post('/register-org', validate(registerOrgDto), registerController)
  *         description: Credenciales inválidas
  */
 router.post('/login', validate(loginDto), loginController)
+router.post('/verify-otp', validate(verifyOtpDto), verifyOtpController)
+router.post('/resend-otp', validate(resendOtpDto), resendOtpController)
 router.get('/me', authenticate, meController)
 
 export default router

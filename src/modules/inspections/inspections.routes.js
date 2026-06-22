@@ -3,11 +3,12 @@ import {
   createVisitController,
   getAllVisitsController,
   getVisitByIdController,
-  getVisitsByLotController
+  getVisitsByLotController,
+  updateVisitStatusController
 } from './inspections.controller.js'
 import { authenticate, requirePermission, requireFeature } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
-import { createVisitDto } from './inspections.dto.js'
+import { createVisitDto, updateVisitStatusDto } from './inspections.dto.js'
 
 const router = Router()
 
@@ -15,5 +16,6 @@ router.get('/', authenticate, requirePermission('inspections:read'), requireFeat
 router.get('/:id', authenticate, requirePermission('inspections:read'), requireFeature('inspections'), getVisitByIdController)
 router.get('/lot/:lotId', authenticate, requirePermission('inspections:read'), requireFeature('inspections'), getVisitsByLotController)
 router.post('/', authenticate, requirePermission('inspections:create'), requireFeature('inspections'), validate(createVisitDto), createVisitController)
+router.patch('/:id/status', authenticate, requirePermission('inspections:update'), requireFeature('inspections'), validate(updateVisitStatusDto), updateVisitStatusController)
 
 export default router

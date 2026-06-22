@@ -1,7 +1,20 @@
 import prisma from '../../config/db.js'
 
-export const createLot = (data) => {
-  return prisma.lot.create({ data })
+export const createLot = ({ ingredients, ...data }) => {
+  return prisma.lot.create({
+    data: {
+      ...data,
+      ...(ingredients?.length && {
+        ingredients: {
+          create: ingredients.map((i) => ({
+            rawMaterialBatchId: i.rawMaterialBatchId,
+            quantityUsed: i.quantityUsed,
+            unit: i.unit,
+          })),
+        },
+      }),
+    },
+  })
 }
 
 export const findAllLots = (organizationId) => {
@@ -19,7 +32,15 @@ export const findLotById = (id, organizationId) => {
       createdBy: { select: { id: true, name: true, email: true } },
       parentLot: true,
       childLots: true,
-      movements: { orderBy: { createdAt: 'desc' } }
+      movements: { orderBy: { createdAt: 'desc' } },
+      supplier: { select: { id: true, name: true } },
+      ingredients: {
+        include: {
+          rawMaterialBatch: {
+            include: { supplier: { select: { id: true, name: true } } }
+          }
+        }
+      }
     }
   })
 }
@@ -31,7 +52,15 @@ export const findLotByQrCode = (qrCode) => {
     include: {
       parentLot: true,
       childLots: true,
-      movements: { orderBy: { createdAt: 'desc' } }
+      movements: { orderBy: { createdAt: 'desc' } },
+      supplier: { select: { id: true, name: true } },
+      ingredients: {
+        include: {
+          rawMaterialBatch: {
+            include: { supplier: { select: { id: true, name: true } } }
+          }
+        }
+      }
     }
   })
 }

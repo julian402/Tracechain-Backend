@@ -81,6 +81,8 @@ model Organization {
   movements Movement[]
   visits    Visit[]
   auditLogs AuditLog[]
+  suppliers          Supplier[]
+  rawMaterialBatches RawMaterialBatch[]
 }
 
 model Permission {
@@ -121,13 +123,15 @@ model RolePermission {
 }
 
 model User {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String
-  email        String   @unique
+  email        String    @unique
   password     String
-  isSuperAdmin Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isSuperAdmin Boolean   @default(false)
+  otpCode      String?
+  otpExpiresAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
@@ -135,12 +139,33 @@ model User {
   roleId String?
   role   Role?   @relation(fields: [roleId], references: [id])
 
-  lots      Lot[]
-  movements Movement[]
-  auditLogs AuditLog[]
-  visits    Visit[]
+  lots               Lot[]
+  movements          Movement[]
+  auditLogs          AuditLog[]
+  visits             Visit[]
+  responsibleVisits  Visit[]            @relation("VisitResponsible")
+  rawMaterialBatches RawMaterialBatch[]
 
   @@index([organizationId])
+}
+
+/**
+ * Registro pendiente de verificación de correo. Guarda los datos del alta
+ * (contraseña y código OTP ya hasheados) hasta que el usuario confirma el
+ * código enviado a su correo. Solo entonces se crea la Organization + User.
+ * Si el código expira o nunca se verifica, no se crea nada.
+ */
+model PendingRegistration {
+  id               String   @id @default(uuid())
+  organizationName String
+  slug             String?
+  name             String
+  email            String   @unique
+  password         String
+  otpCode          String
+  otpExpiresAt     DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Lot {
@@ -167,12 +192,16 @@ model Lot {
   parentLot   Lot?    @relation("LotChildren", fields: [parentLotId], references: [id])
   childLots   Lot[]   @relation("LotChildren")
 
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
   createdById String
   createdBy   User   @relation(fields: [createdById], references: [id])
 
-  movements Movement[]
-  auditLogs AuditLog[]
-  visits    Visit[]
+  movements   Movement[]
+  auditLogs   AuditLog[]
+  visits      Visit[]
+  ingredients LotIngredient[]
 
   @@index([organizationId])
 }
@@ -237,8 +266,14 @@ enum FindingPriority {
   BAJA
 }
 
+enum VisitStatus {
+  PENDIENTE
+  EN_CURSO
+  RESUELTO
+}
+
 model Visit {
-  id              String    @id @default(uuid())
+  id              String      @id @default(uuid())
   visitType       VisitType
   visitDate       DateTime
   actReference    String?
@@ -246,10 +281,10 @@ model Visit {
   auditorName     String
   auditedProcess  String?
   objective       String?
-  responsible     String?
   commitmentDate  DateTime?
   correctiveActions String?
-  createdAt       DateTime  @default(now())
+  status          VisitStatus @default(PENDIENTE)
+  createdAt       DateTime    @default(now())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -260,9 +295,13 @@ model Visit {
   createdById     String
   createdBy       User      @relation(fields: [createdById], references: [id])
 
+  responsibleId   String?
+  responsible     User?     @relation("VisitResponsible", fields: [responsibleId], references: [id])
+
   findings        Finding[]
 
   @@index([organizationId])
+  @@index([responsibleId])
 }
 
 model Finding {
@@ -276,4 +315,65 @@ model Finding {
 
   visitId     String
   visit       Visit           @relation(fields: [visitId], references: [id])
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  taxId     String?
+  contact   String?
+  phone     String?
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  rawMaterialBatches RawMaterialBatch[]
+  lots               Lot[]
+
+  @@index([organizationId])
+}
+
+model RawMaterialBatch {
+  id             String    @id @default(uuid())
+  name           String
+  batchNumber    String?
+  quantity       Float
+  unit           String
+  receivedDate   DateTime?
+  expirationDate DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  usedIn LotIngredient[]
+
+  @@index([organizationId])
+}
+
+model LotIngredient {
+  id           String @id @default(uuid())
+  quantityUsed Float
+  unit         String
+
+  lotId String
+  lot   Lot    @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  rawMaterialBatchId String
+  rawMaterialBatch   RawMaterialBatch @relation(fields: [rawMaterialBatchId], references: [id])
+
+  @@index([lotId])
+  @@index([rawMaterialBatchId])
 }

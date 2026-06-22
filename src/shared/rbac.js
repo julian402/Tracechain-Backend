@@ -28,6 +28,13 @@ export const PERMISSIONS = [
   // Inspecciones
   { key: 'inspections:read', module: 'inspections', action: 'read', label: 'Ver inspecciones' },
   { key: 'inspections:create', module: 'inspections', action: 'create', label: 'Crear inspecciones' },
+  { key: 'inspections:update', module: 'inspections', action: 'update', label: 'Actualizar estado de inspecciones' },
+
+  // Inventario (materias primas, proveedores)
+  { key: 'inventory:read', module: 'inventory', action: 'read', label: 'Ver inventario y materias primas' },
+  { key: 'inventory:create', module: 'inventory', action: 'create', label: 'Registrar materias primas y proveedores' },
+  { key: 'inventory:update', module: 'inventory', action: 'update', label: 'Editar inventario y materias primas' },
+  { key: 'inventory:delete', module: 'inventory', action: 'delete', label: 'Eliminar inventario y materias primas' },
 
   // Reportes y analítica
   { key: 'reports:read', module: 'reports', action: 'read', label: 'Exportar reportes (CSV/PDF)' },
@@ -75,7 +82,8 @@ export const ROLE_TEMPLATES = {
       'lots:read', 'lots:create', 'lots:update', 'lots:delete',
       'movements:read', 'movements:create',
       'audit:read',
-      'inspections:read', 'inspections:create',
+      'inspections:read', 'inspections:create', 'inspections:update',
+      'inventory:read', 'inventory:create', 'inventory:update', 'inventory:delete',
       'reports:read', 'analytics:read',
     ],
   },
@@ -86,6 +94,7 @@ export const ROLE_TEMPLATES = {
       'dashboard:read',
       'lots:read', 'lots:create', 'lots:update',
       'movements:read', 'movements:create',
+      'inventory:read', 'inventory:create',
     ],
   },
   AUDITOR: {
@@ -96,7 +105,8 @@ export const ROLE_TEMPLATES = {
       'lots:read',
       'movements:read',
       'audit:read',
-      'inspections:read', 'inspections:create',
+      'inspections:read', 'inspections:create', 'inspections:update',
+      'inventory:read',
       'reports:read', 'analytics:read',
     ],
   },
@@ -137,4 +147,38 @@ export const seedOrganizationRoles = async (tx, organizationId) => {
     created[name] = role
   }
   return created
+}
+
+/**
+ * Sincroniza (idempotente, solo agrega) los permisos de plantilla en los roles
+ * de sistema ya existentes de todas las organizaciones. Útil tras añadir nuevos
+ * permisos al catálogo: propaga las keys nuevas sin recrear orgs ni borrar
+ * personalizaciones previas. ORG_ADMIN recibe TODOS los permisos de organización.
+ *
+ * @param {import('@prisma/client').PrismaClient} prisma
+ */
+export const syncSystemRolePermissions = async (prisma) => {
+  const permissions = await prisma.permission.findMany()
+  const permByKey = Object.fromEntries(permissions.map((p) => [p.key, p.id]))
+
+  const templateFor = (name) =>
+    name === OWNER_ROLE_NAME ? ORG_PERMISSION_KEYS : ROLE_TEMPLATES[name]?.permissions
+
+  const systemRoles = await prisma.role.findMany({
+    where: { isSystem: true, organizationId: { not: null }, name: { in: Object.keys(ROLE_TEMPLATES) } },
+    include: { permissions: true },
+  })
+
+  for (const role of systemRoles) {
+    const wantedKeys = templateFor(role.name) ?? []
+    const existing = new Set(role.permissions.map((p) => p.permissionId))
+    const toAdd = wantedKeys
+      .map((key) => permByKey[key])
+      .filter((id) => id && !existing.has(id))
+      .map((permissionId) => ({ roleId: role.id, permissionId }))
+
+    if (toAdd.length) {
+      await prisma.rolePermission.createMany({ data: toAdd, skipDuplicates: true })
+    }
+  }
 }
